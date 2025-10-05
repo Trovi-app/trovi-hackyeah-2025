@@ -1,0 +1,86 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../../shared/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                     Int            @id @default(autoincrement())
+  firstName              String
+  email                  String         @unique
+  profilePictureFilename String         @default("default_profile.png")
+  descriptionAsHost      String         @default("")
+  commentsAsHost         Comment[]      @relation("CommentsOnUser")
+  commentsAsVisitor      Comment[]      @relation("CommentsByAuthor")
+  tags                   Tag[]          @relation("UserTags")
+  availabilities         Availability[]
+  chatsAsHost            Chat[]         @relation("ChatsAsHost")
+  chatsAsVisitor         Chat[]         @relation("ChatsAsVisitor")
+  points                 Int            @default(0)
+  minPriceRange          Int            @default(100)
+  maxPriceRange          Int            @default(10000)
+}
+
+model Comment {
+  id       Int    @id @default(autoincrement())
+  content  String
+  rating   Int
+  authorId Int
+  userId   Int
+
+  author User @relation("CommentsByAuthor", fields: [authorId], references: [id])
+  user   User @relation("CommentsOnUser", fields: [userId], references: [id])
+}
+
+model Tag {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[] @relation("UserTags")
+}
+
+model Availability {
+  id       Int      @id @default(autoincrement())
+  location String
+  dateFrom DateTime
+  dateTo   DateTime
+  userId   Int
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+model Chat {
+  id        Int @id @default(autoincrement())
+  hostId    Int
+  visitorId Int
+
+  host                User          @relation("ChatsAsHost", fields: [hostId], references: [id])
+  visitor             User          @relation("ChatsAsVisitor", fields: [visitorId], references: [id])
+  messages            ChatMessage[]
+  cost                Int           @default(100)
+  isCostConfirmed     Boolean       @default(false)
+  isVisitConfirmed    Boolean       @default(false)
+  hasHostCommented    Boolean       @default(false)
+  hasVisitorCommented Boolean       @default(false)
+}
+
+model ChatMessage {
+  id            Int      @id @default(autoincrement())
+  type          String   @default("text")
+  status        String   @default("pending")
+  content       String
+  isHostMessage Boolean
+  timestamp     DateTime @default(now())
+  chatId        Int
+
+  chat Chat @relation(fields: [chatId], references: [id])
+}
